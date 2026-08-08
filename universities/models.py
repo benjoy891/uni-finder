@@ -50,6 +50,7 @@ class Program(models.Model):
     application_end = models.DateField(null=True, blank=True)
     application_platform = models.CharField(max_length=20, choices=APPLICATION_PLATFORM_CHOICES)
     nc_status = models.CharField(max_length=10, choices=NC_STATUS_CHOICES)
+    vpd_required = models.BooleanField(default=False)
     program_url = models.URLField(null=True, blank=True)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
