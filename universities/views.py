@@ -181,7 +181,7 @@ class ProgramListView(APIView):
                 "message": "University Not Found"
             }, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            logger.exception("Unexpected error while creating university: %s", e)
+            logger.exception("Unexpected error while creating program: %s", e)
             return Response({
                 "result": False,
                 "message" : "An unexpected error occured",
@@ -194,10 +194,95 @@ class ProgramListView(APIView):
                 "result": True,
                 "message": "Program created successfully.",
                 "data": ProgramSerializer(program).data
-            })
+            }, status=status.HTTP_201_CREATED)
         
         return Response({
             "result": False,
             "message": "Invalid Program data.",
             "data": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class ProgramDetailView(APIView):
+    def get(self, request, pk):
+        try: 
+            program = Program.objects.get(pk=pk)
+        except Program.DoesNotExist:
+            return Response({
+                "result": False,
+                "error": {
+                    "type": "Not Found",
+                },
+                "message": "Program Not Found."
+            },status=status.HTTP_404_NOT_FOUND)        
+        except Exception as e:
+            logger.exception("Unexpected error while retrieving Program %s: %s", pk, e)
+            return Response({
+                    "result": False,
+                    "error": {
+                        "type": "Internal Server Error"
+                    },
+                    "message": "Something went wrong. Please try again later."
+                },status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
+        serializer = ProgramSerializer(program)
+        return Response({
+            "result": True,
+            "message": "Program retrieved successfully",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
+    def patch(self, request, pk):
+        try:
+            program = Program.objects.get(pk=pk)
+        except Program.DoesNotExist:
+            return Response({
+                "result": False,
+                "message": "Program Not Found."
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        except Exception as e:
+            logger.exception("Unexpected error while retrieving program %s: %s", pk, e)
+            return Response({
+                "result": False,
+                "message": "Something went wrong."
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        serializer = ProgramSerializer(
+            program, 
+            data=request.data,
+            partial=True
+        )
+        if serializer.is_valid():
+            program = serializer.save()
+            return Response({
+                "result": True,
+                "message": "Program updated successfully.",
+                "data": ProgramSerializer(program).data
+            }, status=status.HTTP_200_OK)
+        return Response({
+            "result": False,
+            "message": "Invalid Program data.",
+            "data": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+        
+    def delete(self, request, pk):
+        try:
+            program = Program.objects.get(pk=pk)
+            program.delete()
+            return Response({
+                "result": True,
+                "message": "Program deleted successfully."
+            }, status=status.HTTP_204_NO_CONTENT)
+        except Program.DoesNotExist:
+            return Response({
+                "result": False,
+                "message": "Program Not Found."
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.exception("Unexpected error while deleting program %s: %s", pk, e)
+            return Response({
+                "result": False,
+                "message": "Something went wrong."
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        

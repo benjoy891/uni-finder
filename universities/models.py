@@ -65,7 +65,6 @@ class Program(models.Model):
 
 class AdmissionRequirement(models.Model):
     program = models.OneToOneField(Program, on_delete=models.CASCADE, related_name="admission_requirement")
-    minimum_gpa = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
     minimum_german_gpa = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
     gre = models.BooleanField(default=False)
     gmat = models.BooleanField(default=False)
