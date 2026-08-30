@@ -3,7 +3,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
+from universities.models import University
+from universities.serializers import UniversityDetailSerializer
 from .serializers import UserResgistrationSerializer
+from rest_framework.permissions import IsAuthenticated
 
 # Create your views here.
 
@@ -63,3 +66,18 @@ class UserLoginView(APIView):
                 "result": False,
                 "message": "An unexpected error occurred",
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        
+
+class StudentUniversityListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        universities = University.objects.all()
+        serializer = UniversityDetailSerializer(universities, many=True)
+
+        return Response({
+            "result": True,
+            "message": "Universities retrieved successfully.",
+            "data": serializer.data
+        })
