@@ -2,7 +2,8 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, serializers
-
+from rest_framework.permissions import IsAuthenticated
+from users.permissions import IsStaffUser
 from .models import University, Program
 from .serializers import ProgramSerializer, UniversityDetailSerializer, UniversitySerializer
 import logging
@@ -12,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 # Create your views here.
 class UniversityListView(APIView):
+    permission_classes = [IsStaffUser]
+
     def get(self, request):
         try:
             universities = University.objects.all()
@@ -60,6 +63,8 @@ class UniversityListView(APIView):
         
 
 class UniversityDetailView(APIView):
+    permission_classes = [IsStaffUser]
+
     def get(self, request, pk):
         try: 
             university = University.objects.get(pk=pk)
@@ -144,6 +149,8 @@ class UniversityDetailView(APIView):
 
 
 class ProgramListView(APIView):
+    permission_classes = [IsStaffUser]
+
     def get(self, request, pk):
         try: 
             university = University.objects.get(pk=pk)
@@ -205,6 +212,8 @@ class ProgramListView(APIView):
 
 
 class ProgramDetailView(APIView):
+    permission_classes = [IsStaffUser]
+
     def get(self, request, pk):
         try: 
             program = Program.objects.get(pk=pk)
