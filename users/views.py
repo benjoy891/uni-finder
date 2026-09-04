@@ -4,10 +4,17 @@ from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from universities.models import University
-from universities.serializers import UniversityDetailSerializer
+from universities.serializers import UniversityDetailSerializer, UniversitySerializer
+from users.filters import UniversityFilter
 from .serializers import UserResgistrationSerializer
 from rest_framework.permissions import IsAuthenticated
+import logging
+from django.db.models import Q
 
+
+
+
+logger = logging.getLogger(__name__)
 # Create your views here.
 
 class UserRegistrationView(APIView):
@@ -73,11 +80,27 @@ class StudentUniversityListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        universities = University.objects.all()
-        serializer = UniversityDetailSerializer(universities, many=True)
-
-        return Response({
-            "result": True,
-            "message": "Universities retrieved successfully.",
-            "data": serializer.data
-        })
+        try:
+            universities = University.objects.all()
+            university_filter = UniversityFilter(
+                request.query_params,
+                queryset=universities
+            )
+            serializer = UniversitySerializer(
+                university_filter.qs,
+                many=True
+            )
+            return Response ({
+                "result" : True, 
+                "message": "Universities retrieved successfully.",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)        
+        except Exception as e:
+            logger.exception("Unexpected error while retrieving universities: %s",e)
+            return Response({
+                    "result": False,
+                    "error": {
+                        "type": "Internal Server Error",
+                    },
+                    "message": "Something went wrong. Please try again later."
+                },status=status.HTTP_500_INTERNAL_SERVER_ERROR)

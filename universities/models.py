@@ -35,6 +35,7 @@ class Program(models.Model):
     APPLICATION_PLATFORM_CHOICES = [
         ("DIRECT", "Direct"),
         ("UNI_ASSIST", "Uni-Assist"),
+        ("VPD", "Uni-Assist VPD"),
     ]
     NC_STATUS_CHOICES = [
         ("NC_FREE", "NC-Free"),
