@@ -11,7 +11,7 @@ class UniversitySerializer(serializers.ModelSerializer):
 class AdmissionRequirementSerializer(serializers.ModelSerializer):
     class Meta:
         model = AdmissionRequirement
-        fields = ["minimum_german_gpa", "gre", "gmat", "aps_required", "notes"]
+        fields = ["required_german_gpa", "gre", "gmat", "aps_required", "notes"]
 
 
 class LanguageRequirementSerializer(serializers.ModelSerializer):
