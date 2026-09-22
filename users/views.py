@@ -81,7 +81,7 @@ class StudentUniversityListView(APIView):
 
     def get(self, request):
         try:
-            universities = University.objects.all()
+            universities = University.objects.prefetch_related("programs").all()
             university_filter = UniversityFilter(
                 request.query_params,
                 queryset=universities

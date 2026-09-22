@@ -96,11 +96,17 @@ class LanguageRequirement(models.Model):
         ("GOETHE", "Goethe"),
         ("TELC", "telc"),
     ]
+    CEFR_CHOICES = [
+        ("A1", "A1"), ("A2", "A2"),
+        ("B1", "B1"), ("B2", "B2"),
+        ("C1", "C1"), ("C2", "C2"),
+    ]
 
     program = models.ForeignKey(Program,on_delete=models.CASCADE,related_name="language_requirements")
     language = models.CharField(max_length=20, choices=LANGUAGE_CHOICES)
     exam = models.CharField(max_length=20, choices=EXAM_CHOICES)
-    minimum_score = models.CharField(max_length=50)
+    minimum_score_numeric = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    minimum_level = models.CharField(max_length=10, blank=True, choices=CEFR_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
