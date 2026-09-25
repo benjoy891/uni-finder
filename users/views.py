@@ -104,3 +104,41 @@ class StudentUniversityListView(APIView):
                     },
                     "message": "Something went wrong. Please try again later."
                 },status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class StudentUniversityDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try: 
+            university = (
+                University.objects
+                .prefetch_related(
+                    "programs__admission_requirement",
+                    "programs__language_requirements",
+                )
+                .get(pk=pk)
+            )
+        except University.DoesNotExist:
+            return Response({
+                "result": False,
+                "error": {
+                    "type": "Not Found",
+                },
+                "message": "University Not Found."
+            },status=status.HTTP_404_NOT_FOUND)        
+        except Exception as e:
+            logger.exception("Unexpected error while retrieving university %s: %s", pk, e)
+            return Response({
+                    "result": False,
+                    "error": {
+                        "type": "Internal Server Error"
+                    },
+                    "message": "Something went wrong. Please try again later."
+                },status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
+        serializer = UniversityDetailSerializer(university)
+        return Response({
+            "result": True,
+            "message": "University retrieved successfully",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
