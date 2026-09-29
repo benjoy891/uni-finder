@@ -3,11 +3,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from universities.models import University
+from universities.models import Program, University
 from universities.serializers import UniversityDetailSerializer, UniversitySerializer
-from users.filters import UniversityFilter
-from .serializers import UserResgistrationSerializer
+from users.filters import ProgramFilter
+from .serializers import StudentProgramListSerializer, UserResgistrationSerializer
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import F
 import logging
 from django.db.models import Q
 
@@ -81,15 +82,10 @@ class StudentUniversityListView(APIView):
 
     def get(self, request):
         try:
-            universities = University.objects.prefetch_related("programs").all()
-            university_filter = UniversityFilter(
-                request.query_params,
-                queryset=universities
-            )
-            serializer = UniversitySerializer(
-                university_filter.qs,
-                many=True
-            )
+            programs = Program.objects.select_related("university")
+            program_filter = ProgramFilter(request.query_params, queryset=programs)
+            queryset = program_filter.qs
+            serializer = StudentProgramListSerializer(queryset, many=True)
             return Response ({
                 "result" : True, 
                 "message": "Universities retrieved successfully.",

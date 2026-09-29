@@ -8,30 +8,7 @@ class UniversitySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = University
-        fields = ["id", "name", "country", "city", "address", "website", "status", "created_at", "updated_at"]
-
-    def get_status(self, obj): 
-        today = timezone.localdate()
-        statuses = set()
-
-        for program in obj.programs.all():
-            if not program.application_start or not program.application_end:
-                continue
-            if program.application_start > today:
-                statuses.add("OPENING_SOON")
-            elif program.application_start <= today <= program.application_end:
-                statuses.add("OPEN")
-            elif program.application_end < today:
-                statuses.add("CLOSED")
-
-        if "OPEN" in statuses:
-            return "OPEN"
-        if "OPENING_SOON" in statuses:
-            return "OPENING_SOON"
-        if "CLOSED" in statuses:
-            return "CLOSED"
-        return "UNKNOWN"
-    
+        fields = ["id", "name", "country", "city", "address", "website", "created_at", "updated_at"]
 
 class AdmissionRequirementSerializer(serializers.ModelSerializer):
     class Meta:
