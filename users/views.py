@@ -3,10 +3,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from universities.models import Program, University
-from universities.serializers import UniversityDetailSerializer, UniversitySerializer
+from universities.models import Program
 from users.filters import ProgramFilter
-from .serializers import StudentProgramListSerializer, UserResgistrationSerializer
+from .serializers import ProgramDetailSerializer, StudentProgramListSerializer, UserResgistrationSerializer
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import F
 import logging
@@ -102,29 +101,27 @@ class StudentUniversityListView(APIView):
                 },status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class StudentUniversityDetailView(APIView):
+class StudentProgramDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
         try: 
-            university = (
-                University.objects
-                .prefetch_related(
-                    "programs__admission_requirement",
-                    "programs__language_requirements",
-                )
+            program = (
+                Program.objects
+                .select_related("university", "admission_requirement")
+                .prefetch_related("language_requirements")
                 .get(pk=pk)
             )
-        except University.DoesNotExist:
+        except Program.DoesNotExist:
             return Response({
                 "result": False,
                 "error": {
                     "type": "Not Found",
                 },
-                "message": "University Not Found."
+                "message": "Program Not Found."
             },status=status.HTTP_404_NOT_FOUND)        
         except Exception as e:
-            logger.exception("Unexpected error while retrieving university %s: %s", pk, e)
+            logger.exception("Unexpected error while retrieving program %s: %s", pk, e)
             return Response({
                     "result": False,
                     "error": {
@@ -132,9 +129,9 @@ class StudentUniversityDetailView(APIView):
                     },
                     "message": "Something went wrong. Please try again later."
                 },status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
-        serializer = UniversityDetailSerializer(university)
+        serializer = ProgramDetailSerializer(program)
         return Response({
             "result": True,
-            "message": "University retrieved successfully",
+            "message": "Program retrieved successfully.",
             "data": serializer.data
         }, status=status.HTTP_200_OK)

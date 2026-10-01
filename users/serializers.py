@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
-from universities.models import Program
+from universities.models import Program, University
+from universities.serializers import AdmissionRequirementSerializer, LanguageRequirementSerializer
 from .models import User
 from django.contrib.auth import password_validation
 
@@ -46,7 +47,7 @@ class StudentProgramListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Program
-        fields = ["university_id", "name", "program_name", "country",
+        fields = ["id", "university_id", "name", "program_name", "country",
                   "city", "address", "website", "status"]
 
     def get_status(self, obj):
@@ -58,3 +59,24 @@ class StudentProgramListSerializer(serializers.ModelSerializer):
         if obj.application_start <= today <= obj.application_end:
             return "OPEN"
         return "CLOSED"
+
+
+class UniversitySummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = University
+        fields = ["id", "name", "country", "city", "address", "website"]
+
+
+class ProgramDetailSerializer(serializers.ModelSerializer):
+    university = UniversitySummarySerializer(read_only=True)
+    admission_requirement = AdmissionRequirementSerializer(read_only=True, allow_null=True)
+    language_requirements = LanguageRequirementSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Program
+        fields = [
+            "id", "name", "degree", "teaching_language", "semester",
+            "application_start", "application_end", "application_platform",
+            "vpd_required", "nc_status", "program_url", "description",
+            "university", "admission_requirement", "language_requirements",
+        ]
