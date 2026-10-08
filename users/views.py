@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.exceptions import NotFound
+from config.paginator import CustomPagination
 from universities.models import Program
 from users.filters import ProgramFilter
 from .serializers import ProgramDetailSerializer, StudentProgramListSerializer, UserResgistrationSerializer
@@ -78,27 +80,31 @@ class UserLoginView(APIView):
 
 class StudentUniversityListView(APIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
 
     def get(self, request):
         try:
             programs = Program.objects.select_related("university")
             program_filter = ProgramFilter(request.query_params, queryset=programs)
             queryset = program_filter.qs
-            serializer = StudentProgramListSerializer(queryset, many=True)
-            return Response ({
-                "result" : True, 
-                "message": "Universities retrieved successfully.",
-                "data": serializer.data
-            }, status=status.HTTP_200_OK)        
-        except Exception as e:
-            logger.exception("Unexpected error while retrieving universities: %s",e)
+            paginator = self.pagination_class()
+            page = paginator.paginate_queryset(queryset, request, view=self)
+            serializer = StudentProgramListSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)    
+        except NotFound as e:
             return Response({
-                    "result": False,
-                    "error": {
-                        "type": "Internal Server Error",
-                    },
-                    "message": "Something went wrong. Please try again later."
-                },status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                "result": False,
+                "error": {"type": "Not Found"},
+                "message": str(e.detail),
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            logger.exception("Unexpected error while retrieving universities: %s", e)
+            return Response({
+                "result": False,
+                "error": {"type": "Internal Server Error"},
+                "message": "Something went wrong. Please try again later.",
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class StudentProgramDetailView(APIView):
