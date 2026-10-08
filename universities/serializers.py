@@ -4,7 +4,6 @@ from django.utils import timezone
 from .models import University, AdmissionRequirement, LanguageRequirement, Program
 
 class UniversitySerializer(serializers.ModelSerializer):
-    status = serializers.SerializerMethodField()
     
     class Meta:
         model = University

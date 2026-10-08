@@ -3,39 +3,42 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, serializers
 from rest_framework.permissions import IsAuthenticated
+from config.paginator import CustomPagination
 from users.permissions import IsStaffUser
 from .models import University, Program
 from .serializers import ProgramSerializer, UniversityDetailSerializer, UniversitySerializer
 import logging
 logger = logging.getLogger(__name__)
+from rest_framework.exceptions import NotFound
 
 
 
-# Create your views here.
-class UniversityListView(APIView):
+class UniversityView(APIView):
     permission_classes = [IsStaffUser]
+    pagination_class = CustomPagination
 
     def get(self, request):
         try:
-            universities = University.objects.all()
-            serializer = UniversitySerializer(
-                universities,
-                many=True
-            )
-            return Response ({
-                "result" : True, 
-                "message": "Universities retrieved successfully.",
-                "data": serializer.data
-            }, status=status.HTTP_200_OK)        
-        except Exception as e:
-            logger.exception("Unexpected error while retrieving universities: %s",e)
+            universities = University.objects.all().order_by("id")
+            paginator = self.pagination_class()
+            page = paginator.paginate_queryset(universities, request, view=self)
+            serializer = UniversitySerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        except NotFound as e:
             return Response({
-                    "result": False,
-                    "error": {
-                        "type": "Internal Server Error",
-                    },
-                    "message": "Something went wrong. Please try again later."
-                },status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                "result": False,
+                "error": {"type": "Not Found"},
+                "message": str(e.detail),
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            logger.exception("Unexpected error while retrieving universities: %s", e)
+            return Response({
+                "result": False,
+                "error": {"type": "Internal Server Error"},
+                "message": "Something went wrong. Please try again later.",
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def post(self, request):
         try:
@@ -57,59 +60,27 @@ class UniversityListView(APIView):
             logger.exception("Unexpected error while creating university: %s", e)
             return Response({
                 "result": False,
-                "message" : "An unexpected error occured",
+                "message": "An unexpected error occured",
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        
-
-class UniversityDetailView(APIView):
-    permission_classes = [IsStaffUser]
-
-    def get(self, request, pk):
-        try: 
-            university = University.objects.get(pk=pk)
-        except University.DoesNotExist:
-            return Response({
-                "result": False,
-                "error": {
-                    "type": "Not Found",
-                },
-                "message": "University Not Found."
-            },status=status.HTTP_404_NOT_FOUND)        
-        except Exception as e:
-            logger.exception("Unexpected error while retrieving university %s: %s", pk, e)
-            return Response({
-                    "result": False,
-                    "error": {
-                        "type": "Internal Server Error"
-                    },
-                    "message": "Something went wrong. Please try again later."
-                },status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
-        serializer = UniversityDetailSerializer(university)
-        return Response({
-            "result": True,
-            "message": "University retrieved successfully",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
-
-    def patch(self, request, pk):
+    def patch(self, request, pk=None):
         try:
             university = University.objects.get(pk=pk)
         except University.DoesNotExist:
             return Response({
                 "result": False,
                 "message": "University Not Found."
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
+            }, status=status.HTTP_404_NOT_FOUND)
+
         except Exception as e:
             logger.exception("Unexpected error while retrieving university %s: %s", pk, e)
             return Response({
                 "result": False,
                 "message": "Something went wrong."
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+
         serializer = UniversitySerializer(
-            university, 
+            university,
             data=request.data,
             partial=True
         )
@@ -125,15 +96,15 @@ class UniversityDetailView(APIView):
             "message": "Invalid University data.",
             "data": serializer.errors
         }, status=status.HTTP_404_NOT_FOUND)
-        
-    def delete(self, request, pk):
+
+    def delete(self, request, pk=None):
         try:
             university = University.objects.get(pk=pk)
             university.delete()
             return Response({
                 "result": True,
                 "message": "University deleted successfully."
-            }, status=status.HTTP_204_NO_CONTENT)
+            }, status=status.HTTP_200_OK)
         except University.DoesNotExist:
             return Response({
                 "result": False,
@@ -144,54 +115,57 @@ class UniversityDetailView(APIView):
             return Response({
                 "result": False,
                 "message": "Something went wrong."
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
 
 
-class ProgramListView(APIView):
+class ProgramView(APIView):
     permission_classes = [IsStaffUser]
+    pagination_class = CustomPagination
 
-    def get(self, request, pk):
-        try: 
-            university = University.objects.get(pk=pk)
+    def get(self, request, university_pk=None):
+        try:
+            university = University.objects.get(pk=university_pk)
+            programs = Program.objects.filter(university=university).order_by("id")
+            paginator = self.pagination_class()
+            page = paginator.paginate_queryset(programs, request, view=self)
+            serializer = ProgramSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
         except University.DoesNotExist:
             return Response({
                 "result": False,
-                "error": {
-                    "type": "Not Found",
-                },
+                "error": {"type": "Not Found"},
                 "message": "University Not Found."
-            },status=status.HTTP_404_NOT_FOUND)        
-        except Exception as e:
-            logger.exception("Unexpected error while retrieving university %s: %s", pk, e)
-            return Response({
-                    "result": False,
-                    "error": {
-                        "type": "Internal Server Error"
-                    },
-                    "message": "Something went wrong. Please try again later."
-                },status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
-        programs = Program.objects.filter(university=university)       
-        serializer = ProgramSerializer(programs, many=True)
-        return Response({
-            "result": True,
-            "message": "Programs retrieved successfully",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
+            }, status=status.HTTP_404_NOT_FOUND)
 
-    def post(self, request, pk):
+        except NotFound as e:
+            return Response({
+                "result": False,
+                "error": {"type": "Not Found"},
+                "message": str(e.detail),
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            logger.exception("Unexpected error while retrieving programs for university %s: %s", university_pk, e)
+            return Response({
+                "result": False,
+                "error": {"type": "Internal Server Error"},
+                "message": "Something went wrong. Please try again later."
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request, university_pk=None):
         try:
-            university = University.objects.get(pk=pk)
+            university = University.objects.get(pk=university_pk)
         except University.DoesNotExist:
             return Response({
-                "result" : False,
+                "result": False,
                 "message": "University Not Found"
             }, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             logger.exception("Unexpected error while creating program: %s", e)
             return Response({
                 "result": False,
-                "message" : "An unexpected error occured",
+                "message": "An unexpected error occured",
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         serializer = ProgramSerializer(data=request.data)
@@ -202,46 +176,14 @@ class ProgramListView(APIView):
                 "message": "Program created successfully.",
                 "data": ProgramSerializer(program).data
             }, status=status.HTTP_201_CREATED)
-        
+
         return Response({
             "result": False,
             "message": "Invalid Program data.",
             "data": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
 
-
-
-class ProgramDetailView(APIView):
-    permission_classes = [IsStaffUser]
-
-    def get(self, request, pk):
-        try: 
-            program = Program.objects.get(pk=pk)
-        except Program.DoesNotExist:
-            return Response({
-                "result": False,
-                "error": {
-                    "type": "Not Found",
-                },
-                "message": "Program Not Found."
-            },status=status.HTTP_404_NOT_FOUND)        
-        except Exception as e:
-            logger.exception("Unexpected error while retrieving Program %s: %s", pk, e)
-            return Response({
-                    "result": False,
-                    "error": {
-                        "type": "Internal Server Error"
-                    },
-                    "message": "Something went wrong. Please try again later."
-                },status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
-        serializer = ProgramSerializer(program)
-        return Response({
-            "result": True,
-            "message": "Program retrieved successfully",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
-
-    def patch(self, request, pk):
+    def patch(self, request, pk=None):
         try:
             program = Program.objects.get(pk=pk)
         except Program.DoesNotExist:
@@ -249,16 +191,15 @@ class ProgramDetailView(APIView):
                 "result": False,
                 "message": "Program Not Found."
             }, status=status.HTTP_404_NOT_FOUND)
-        
         except Exception as e:
             logger.exception("Unexpected error while retrieving program %s: %s", pk, e)
             return Response({
                 "result": False,
                 "message": "Something went wrong."
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+
         serializer = ProgramSerializer(
-            program, 
+            program,
             data=request.data,
             partial=True
         )
@@ -274,15 +215,15 @@ class ProgramDetailView(APIView):
             "message": "Invalid Program data.",
             "data": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
-        
-    def delete(self, request, pk):
+
+    def delete(self, request, pk=None):
         try:
             program = Program.objects.get(pk=pk)
             program.delete()
             return Response({
                 "result": True,
                 "message": "Program deleted successfully."
-            }, status=status.HTTP_204_NO_CONTENT)
+            }, status=status.HTTP_200_OK)
         except Program.DoesNotExist:
             return Response({
                 "result": False,
@@ -294,4 +235,3 @@ class ProgramDetailView(APIView):
                 "result": False,
                 "message": "Something went wrong."
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
